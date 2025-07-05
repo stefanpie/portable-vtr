@@ -73,6 +73,37 @@ RUN rm -rf /var/lib/apt/lists/*
 
 
 
+# test to see if clang and clang++ are installed
+# if they are set them to be CC and CXX
+# else error
+
+RUN if command -v clang >/dev/null 2>&1 && command -v clang++ >/dev/null 2>&1; then \
+    echo "Found clang and clang++, setting as default compilers"; \
+    clang --version; \
+    clang++ --version; \
+    else \
+    echo "ERROR: clang and/or clang++ not found!"; \
+    exit 1; \
+    fi
+
+ENV CC=clang
+ENV CXX=clang++
+
+WORKDIR /src
+RUN git clone --depth 1 \
+    --branch v3.1.5 \
+    --single-branch \
+    https://github.com/microsoft/mimalloc.git
+WORKDIR /src/mimalloc
+RUN mkdir -p out/release
+WORKDIR /src/mimalloc/out/release
+RUN cmake ../.. \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DBUILD_SHARED_LIBS=OFF \
+    -DMI_BUILD_OBJECT=ON \
+    -DMI_OVERRIDE=ON
+RUN make -j64
+
 # fetch VTR v9.0.0
 WORKDIR /src
 RUN git clone --depth 1 \
@@ -106,7 +137,7 @@ RUN cmake .. \
     -DBUILD_SHARED_LIBS=OFF \
     -DCMAKE_INSTALL_PREFIX=/opt/vtr \
     -DCMAKE_FIND_LIBRARY_SUFFIXES=".a;.lib" \
-    -DCMAKE_EXE_LINKER_FLAGS="-static -static-libgcc -static-libstdc++ -pthread" \
+    -DCMAKE_EXE_LINKER_FLAGS="/src/mimalloc/out/release/mimalloc.o -static -static-libgcc -static-libstdc++ -pthread -Wl,--allow-multiple-definition" \
     -DZLIB_USE_STATIC_LIBS=ON \
     -DZLIB_LIBRARY=/usr/lib/x86_64-linux-gnu/libz.a \
     -DZLIB_INCLUDE_DIR=/usr/include \
@@ -116,7 +147,6 @@ RUN cmake .. \
     -DWITH_ABC=ON \
     -DVPR_USE_EZGL=off \
     -DVTR_ENABLE_CAPNPROTO=OFF
-
 
 
 # RUN make -j$(nproc)
