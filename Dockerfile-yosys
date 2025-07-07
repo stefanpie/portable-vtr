@@ -75,6 +75,8 @@ RUN sed -i \
     '/^\s*\$(PROGRAM_PREFIX)yosys\$(EXE): \$(OBJS)/{n;s/\$(CXX) -o \$(PROGRAM_PREFIX)yosys\$(EXE) \(.*\) \$(OBJS)/$(CXX) -o $(PROGRAM_PREFIX)yosys$(EXE) \1 libs\/mimalloc.o $(OBJS)/}' \
     Makefile
 
+RUN sed -i '/^\$(PROG): \$(OBJ)/{n;n;s/\$(LD) -o \$@ \$\^ $(LDFLAGS) $(LIBS)/$(LD) -o \$@ ..\/libs\/mimalloc.o \$\^ $(LDFLAGS) $(LIBS)/}' abc/Makefile
+
 RUN make config-gcc-static
 RUN make -j$(nproc)
 RUN mkdir -p /yosys-install-mimalloc
